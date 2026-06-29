@@ -64,22 +64,16 @@ class AuthenticationTest extends TestCase
 
         $response
             ->assertOk()
-            ->assertSeeVolt('layout.navigation');
+            ->assertSee('Logout');
     }
 
     public function test_users_can_logout(): void
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user);
+        $response = $this->actingAs($user)->post(route('logout'));
 
-        $component = Volt::test('layout.navigation');
-
-        $component->call('logout');
-
-        $component
-            ->assertHasNoErrors()
-            ->assertRedirect('/');
+        $response->assertRedirect('/');
 
         $this->assertGuest();
     }

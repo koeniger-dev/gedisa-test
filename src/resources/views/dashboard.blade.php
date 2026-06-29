@@ -1,17 +1,11 @@
 <x-app-layout>
-    <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
-    </x-slot>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h1 class="text-2xl font-semibold text-gray-900">Watchlist</h1>
+        <p class="mt-1 text-sm text-gray-500">Hier erscheinen die von dir vorgemerkten Filme.</p>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6 text-gray-900">
-                    {{ __("You're logged in!") }}
-                </div>
-            </div>
+        {{-- Placeholder until the Watchlist bonus (Schritt 8) is implemented. --}}
+        <div class="mt-8 rounded-lg bg-white shadow-sm ring-1 ring-gray-200 p-6 text-gray-500">
+            Deine Watchlist ist noch leer. Filme kannst du in der Detailansicht vormerken.
         </div>
     </div>
 </x-app-layout>
