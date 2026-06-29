@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'omdb' => [
+        'key' => env('OMDB_API_KEY'),
+        'url' => env('OMDB_URL', 'https://www.omdbapi.com/'),
+        // HTTP-response cache lifetime in seconds (level-1 cache, see OmdbService).
+        'cache_ttl' => (int) env('OMDB_CACHE_TTL', 600),
+    ],
+
 ];
