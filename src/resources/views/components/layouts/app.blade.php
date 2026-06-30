@@ -19,6 +19,7 @@
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
                     <div class="flex items-center gap-8">
                         <a href="{{ route('movies.search') }}" wire:navigate class="text-lg font-semibold">🎬 MovieRatings</a>
+                        <a href="{{ route('movies.rated') }}" wire:navigate class="text-sm text-gray-600 hover:text-gray-900">Bewertete Filme</a>
                     </div>
 
                     <div class="flex items-center gap-4 text-sm">
