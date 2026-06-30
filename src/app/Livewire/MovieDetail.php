@@ -30,6 +30,11 @@ final class MovieDetail extends Component
      */
     public ?int $userRating = null;
 
+    /**
+     * Whether the movie is on the current user's watchlist.
+     */
+    public bool $inWatchlist = false;
+
     public function mount(string $imdbId, FindOrCacheMovie $findOrCacheMovie): void
     {
         $movie = $findOrCacheMovie($imdbId);
@@ -38,6 +43,19 @@ final class MovieDetail extends Component
 
         $this->movie = $movie;
         $this->userRating = $this->resolveUserRating();
+        $this->inWatchlist = $this->resolveInWatchlist();
+    }
+
+    /**
+     * Add or remove the movie from the current user's watchlist.
+     */
+    public function toggleWatchlist(): void
+    {
+        abort_unless(Auth::check(), 403);
+
+        Auth::user()->watchlistMovies()->toggle($this->movie->id);
+
+        $this->inWatchlist = $this->resolveInWatchlist();
     }
 
     /**
@@ -101,5 +119,16 @@ final class MovieDetail extends Component
         return $this->movie->ratings()
             ->where('user_id', Auth::id())
             ->value('rating');
+    }
+
+    private function resolveInWatchlist(): bool
+    {
+        if (! Auth::check()) {
+            return false;
+        }
+
+        return Auth::user()->watchlistMovies()
+            ->whereKey($this->movie->id)
+            ->exists();
     }
 }

@@ -70,6 +70,20 @@
                             <span class="ml-2 text-sm text-gray-500">({{ $userRating }}/5)</span>
                         @endif
                     </div>
+
+                    {{-- Watchlist toggle --}}
+                    <button
+                        type="button"
+                        wire:click="toggleWatchlist"
+                        wire:loading.attr="disabled"
+                        wire:target="toggleWatchlist"
+                        class="mt-4 inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-sm font-medium ring-1 transition
+                            {{ $inWatchlist
+                                ? 'bg-gray-900 text-white ring-gray-900 hover:bg-gray-700'
+                                : 'bg-white text-gray-700 ring-gray-300 hover:ring-gray-900' }}"
+                    >
+                        {{ $inWatchlist ? '✓ In Watchlist' : '+ Zur Watchlist' }}
+                    </button>
                 @else
                     <p class="text-sm text-gray-500">
                         <a href="{{ route('login') }}" wire:navigate class="font-medium text-gray-900 underline">Logge dich ein</a>,
