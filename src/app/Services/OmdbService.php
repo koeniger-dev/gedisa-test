@@ -42,7 +42,9 @@ final class OmdbService
             return collect();
         }
 
-        $payload = $this->cachedRequest(['s' => $query], "omdb:search:{$query}");
+        // OMDb is case-insensitive, so normalise the cache key to maximise hits
+        // ("Batman" and "batman" must not trigger two separate API calls).
+        $payload = $this->cachedRequest(['s' => $query], 'omdb:search:'.mb_strtolower($query));
 
         if (! $this->isSuccessful($payload)) {
             return collect();

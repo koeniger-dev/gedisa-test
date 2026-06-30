@@ -148,6 +148,20 @@ final class OmdbServiceTest extends TestCase
         $this->travelBack();
     }
 
+    public function test_search_cache_key_is_case_insensitive(): void
+    {
+        Http::fake([
+            '*' => Http::response(['Response' => 'True', 'Search' => []]),
+        ]);
+
+        $service = $this->service();
+        $service->search('Batman');
+        $service->search('batman');
+
+        // OMDb is case-insensitive, so both variants share one cache entry.
+        Http::assertSentCount(1);
+    }
+
     public function test_search_degrades_gracefully_on_connection_error(): void
     {
         Http::fake(function (): never {
