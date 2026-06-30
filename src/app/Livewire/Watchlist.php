@@ -15,6 +15,8 @@ final class Watchlist extends Component
      */
     public function remove(int $movieId): void
     {
+        abort_unless(Auth::check(), 403);
+
         Auth::user()->watchlistMovies()->detach($movieId);
     }
 
