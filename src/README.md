@@ -1,58 +1,117 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Movie Rating App — TALL Stack
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Code-Challenge (GEDISA): Eine Movie-Rating-App auf Basis des **TALL-Stacks**
+(Tailwind, Alpine, Livewire, Laravel). User suchen Filme über die
+[OMDb-API](https://www.omdbapi.com/), sehen Details und vergeben 1–5-Sterne-
+Bewertungen. Eine öffentliche Liste zeigt alle intern bewerteten Filme mit
+Durchschnittsbewertung.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **PHP 8.3**, **Laravel 13**
+- **Livewire 3** (klassische Komponenten — Klasse + Blade, kein Volt)
+- **Tailwind CSS 3** + Alpine.js (mit Livewire gebündelt)
+- **PHPUnit** für Tests, **Laravel Pint** für Code-Style
+- **Laravel Breeze** (Authentifizierung)
+- **MariaDB 11** (Container `mysql`); Tests laufen auf In-Memory-SQLite
+- Docker-basierte Umgebung (`app`, `nginx`, `mysql`, `node`)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Architektur — die wichtigsten Entscheidungen
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Thema | Entscheidung | Warum |
+|---|---|---|
+| **OMDb-Zugriff** | Gekapselt in `OmdbService`, Antworten in `MovieData` (readonly DTO) gemappt | Kein `Http::get()` in Komponenten, typsicher, isoliert testbar |
+| **Zwei Cache-Ebenen** | (1) `Cache::remember` auf rohe OMDb-Antworten; (2) Filme lokal in `movies` persistiert (`FindOrCacheMovie`, cache-aside) | Schont das OMDb-Limit, macht die App unabhängig von OMDb, liefert den lokalen FK für Ratings |
+| **Durchschnitt** | DB-seitig via `withAvg`/`withCount` (Subqueries) | Keine PHP-Schleifen, kein N+1 |
+| **Rating-Sicherheit** | `unique(user_id, movie_id)` + CHECK `1..5` in der DB, `RatingPolicy`, Auth-Guard in der Action | Defense in depth — DB als letzte Verteidigungslinie |
+| **Watchlist** | Reiner Many-to-Many-Pivot (`User::watchlistMovies`) | Keine eigene Domain-Klasse nötig (bewusste Einfachheit) |
+| **Livewire** | `wire:model.live.debounce`, `#[Computed]`-Aggregate, `wire:loading`, `wire:navigate` | Reaktive UI ohne API-Spam, ohne Reload |
 
-## Learning Laravel
+## Seiten / Routen
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+| Route | Komponente | Zugriff |
+|---|---|---|
+| `/` | `MovieSearch` | öffentlich |
+| `/movies/{imdbId}` | `MovieDetail` (Details + Rating + Watchlist-Toggle) | öffentlich (Bewerten nur eingeloggt) |
+| `/rated` | `RatedMoviesList` (bewertete Filme, Ø-Bewertung, Sortierung, Pagination) | öffentlich |
+| `/dashboard` | `Watchlist` | nur eingeloggt |
 
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+## Setup
 
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+Die Umgebung läuft in Docker: **PHP/Artisan/Composer** im Container `app`,
+**Node/npm** im Container `node`.
 
 ```bash
-composer require laravel/boost --dev
+# 1. Images bauen & Container starten
+#    (--build baut das app-Image aus docker/php/Dockerfile)
+docker compose build
+docker compose up -d
 
-php artisan boost:install
+# 2. Abhängigkeiten installieren
+docker compose exec app composer install
+docker compose exec node npm install
+
+# 3. Environment
+cp .env.example .env
+docker compose exec app php artisan key:generate
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+**OMDb-Key eintragen** in `.env` (kostenlos unter
+<https://www.omdbapi.com/apikey.aspx>):
 
-## Contributing
+```env
+OMDB_API_KEY=dein_key_hier
+OMDB_URL=https://www.omdbapi.com/
+OMDB_CACHE_TTL=600
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+# 4. Datenbank
+docker compose exec app php artisan migrate
 
-## Code of Conduct
+# 5. Frontend bauen
+docker compose exec node npm run build
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+App läuft unter <http://localhost:8000>.
 
-## Security Vulnerabilities
+> **Hinweis zum Dev-Server:** `npm run dev` (HMR) erfordert, dass Vite im
+> Container auf `0.0.0.0` lauscht (`server.host` in `vite.config.js`), sonst
+> ist der Dev-Server vom Host-Browser nicht erreichbar. Für die Bewertung
+> genügt `npm run build` — der statische Build braucht keinen Dev-Server.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tests
 
-## License
+73 Tests (Unit + Feature) auf In-Memory-SQLite. OMDb wird durchgängig mit
+`Http::fake()` gemockt — keine echten API-Calls in der Suite.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+docker compose exec app php artisan test            # alle
+docker compose exec app php artisan test --compact   # kompakte Ausgabe
+docker compose exec app php artisan test --filter=MovieDetail
+```
+
+Code-Style:
+
+```bash
+docker compose exec app vendor/bin/pint
+```
+
+## Projektstruktur
+
+```
+app/
+├── Actions/FindOrCacheMovie.php   # cache-aside: lokal finden oder von OMDb holen & persistieren
+├── DTOs/MovieData.php             # readonly DTO, einzige Stelle des OMDb-Mappings
+├── Services/OmdbService.php       # alle OMDb-HTTP-Calls + Level-1-Cache
+├── Livewire/
+│   ├── MovieSearch.php            # Suche + lokales Avg-Enrichment
+│   ├── MovieDetail.php            # Details, Rating, Watchlist-Toggle
+│   ├── RatedMoviesList.php        # öffentliche Liste
+│   └── Watchlist.php              # Dashboard
+├── Models/{Movie,Rating,User}.php
+└── Policies/RatingPolicy.php
+resources/views/
+├── components/movie-poster.blade.php   # Poster mit graceful Fallback (Alpine)
+└── livewire/…                          # zugehörige Views
+```
