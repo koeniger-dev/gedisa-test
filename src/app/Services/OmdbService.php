@@ -44,7 +44,7 @@ final class OmdbService
 
         $payload = $this->cachedRequest(['s' => $query], "omdb:search:{$query}");
 
-        if (!$this->isSuccessful($payload)) {
+        if (! $this->isSuccessful($payload)) {
             return collect();
         }
 
@@ -66,7 +66,7 @@ final class OmdbService
             "omdb:movie:{$imdbId}",
         );
 
-        if (!$this->isSuccessful($payload)) {
+        if (! $this->isSuccessful($payload)) {
             return null;
         }
 
@@ -89,14 +89,19 @@ final class OmdbService
     }
 
     /**
-     * @param array<string, string> $params
+     * @param  array<string, string>  $params
      * @return array<string, mixed>
-     * @throws ConnectionException
      */
     private function request(array $params): array
     {
-        $response = Http::baseUrl($this->baseUrl)
-            ->get('/', [...$params, 'apikey' => $this->apiKey]);
+        try {
+            $response = Http::baseUrl($this->baseUrl)
+                ->get('/', [...$params, 'apikey' => $this->apiKey]);
+        } catch (ConnectionException) {
+            // Network/DNS/timeout failure: degrade to an OMDb-shaped error so
+            // callers only ever branch on the "Response" flag.
+            return ['Response' => 'False'];
+        }
 
         if ($response->failed()) {
             return ['Response' => 'False'];

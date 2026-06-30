@@ -7,6 +7,7 @@ namespace Tests\Unit;
 use App\DTOs\MovieData;
 use App\Enums\MovieType;
 use App\Services\OmdbService;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -126,5 +127,42 @@ final class OmdbServiceTest extends TestCase
 
         // Second call hits the cache, so OMDb is only contacted once.
         Http::assertSentCount(1);
+    }
+
+    public function test_cache_expires_after_ttl_and_refetches(): void
+    {
+        Http::fake([
+            '*' => Http::response(['Response' => 'True', 'Search' => []]),
+        ]);
+
+        // TTL is 600s (see service() helper).
+        $service = $this->service();
+        $service->search('batman');
+
+        $this->travel(11)->minutes();
+        $service->search('batman');
+
+        // After the TTL elapsed the second call goes back out to OMDb.
+        Http::assertSentCount(2);
+
+        $this->travelBack();
+    }
+
+    public function test_search_degrades_gracefully_on_connection_error(): void
+    {
+        Http::fake(function (): never {
+            throw new ConnectionException('Could not resolve host: www.omdbapi.com');
+        });
+
+        $this->assertTrue($this->service()->search('batman')->isEmpty());
+    }
+
+    public function test_fetch_returns_null_on_connection_error(): void
+    {
+        Http::fake(function (): never {
+            throw new ConnectionException('Connection timed out');
+        });
+
+        $this->assertNull($this->service()->fetchByImdbId('tt0372784'));
     }
 }
