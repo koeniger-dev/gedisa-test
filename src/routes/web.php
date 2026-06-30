@@ -1,10 +1,12 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Livewire\MovieDetail;
 use App\Livewire\MovieSearch;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', MovieSearch::class)->name('movies.search');
+Route::get('movies/{imdbId}', MovieDetail::class)->name('movies.show');
 
 // Logout lives in the shared layout nav; a plain POST keeps it decoupled from
 // any single Livewire component (the old Breeze nav component was removed).

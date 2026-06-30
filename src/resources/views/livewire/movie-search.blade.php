@@ -34,7 +34,7 @@
                 @php($stat = $stats->get($movie->imdbId))
                 <a
                     wire:key="movie-{{ $movie->imdbId }}"
-                    href="/movies/{{ $movie->imdbId }}"
+                    href="{{ route('movies.show', $movie->imdbId) }}"
                     wire:navigate
                     class="group block rounded-lg bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden hover:ring-gray-900 transition"
                 >
